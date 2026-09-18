@@ -1,6 +1,7 @@
 import { Schema, model } from "mongoose";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 import {
 	JWT_ACCESS_TOKEN_SECRET,
 	JWT_REFRESH_TOKEN_SECRET,
@@ -41,7 +42,7 @@ const userSchema = new Schema(
 			type: String,
 		},
 		resetPasswordToken: {
-			type: STring,
+			type: String,
 		},
 		resetPasswordTokenExpiry: {
 			type: Date,
@@ -55,6 +56,16 @@ userSchema.pre("save", async (next) => {
 	this.password = await bcrypt.hash(this.password, 10);
 	next();
 });
+
+userSchema.methods.generateHashedToken = async function () {
+	const unHashedToken = crypto.randomBytes(32).toString("hex");
+	const hashedToken = crypto
+		.createHash("sha256")
+		.update(unHashedToken)
+		.digest("hex");
+	const tokenExpiry = Date.now() + 20 * 60 * 1000;
+	return { unHashedToken, hashedToken, tokenExpiry };
+};
 
 userSchema.methods.generateAccessToken = function () {
 	return jwt.sign(
